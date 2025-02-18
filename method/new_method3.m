@@ -1,37 +1,23 @@
-function [new_maxium, rho, c_hat, L_sol] = new_method3(params)
+function [new_maxium, rho, L_sol] = new_method3(params)
     GP = params.GP;
     N = params.N;
     r = params.rx_signal;
     
     p_break = zeros(1,GP);
-    a_k = zeros(1,GP);
-    b_k = zeros(1,GP);
     rho = zeros(GP,GP);  %%%% 0으로 이루어진 16x16 행렬 생성
     pp = zeros(GP,GP);   %%%% 0으로 이루어진 16x16 행렬 생성
     pn = zeros(1,GP);    %%%% 0으로 이루어진 16x16 행렬 생성  
     power_u = zeros(1,GP);
     new_maxium = zeros(1,GP);
     N_OFDM_symbols = length(r)/(GP+N);
-
-    for k = 1:GP
-        a = 0;
-        b = 0;
-        for m = 1:N_OFDM_symbols
-            a = a + abs(r((m-1)*(GP+N)+GP-k+1))^2 + abs(r((GP+N)*m-k+1))^2;%%%
-            b = b + real(r((m-1)*(GP+N)+GP-k+1)*conj(r((GP+N)*m-k+1)));%%%%%%%
-        end
-        a_k(k) = a/N_OFDM_symbols;   %%ak를 생성
-        b_k(k) = b/N_OFDM_symbols;   %%bk를 생성
-    end
-    c = 0;
-    for k = 1+GP:N
-        for m = 1:N_OFDM_symbols
-            c = c + abs(r(k+(GP+N)*(m-1)))^2;
-        end
-    end
-    c_hat = c/(N_OFDM_symbols*(N-GP)); %%c_hat을 생성
+    
+    a_k = params.a_k;
+    b_k = params.b_k;
+    g_k = params.g_k;
+    c_hat = params.c_hat;
+    
     for k =1:16%%%%%%%%%%%%%%%%%%%%%%%%%%0과 1사이의 rho를 계산한다.
-        for p = 1:-10^-3:0
+        for p = 1:-0.001:0
             f = c_hat*p^3-b_k(k)*p^2+(a_k(k)-c_hat)*p-b_k(k);%%from (21)
             if f <10^-10
                 p_break(k) = p;
@@ -50,6 +36,7 @@ function [new_maxium, rho, c_hat, L_sol] = new_method3(params)
             p_pw(k) = 0;
         end
     end
+
      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%Table(1) in[19]
     for u = 1:16
         for k = 1:u

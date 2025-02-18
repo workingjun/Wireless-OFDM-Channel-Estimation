@@ -1,52 +1,32 @@
 function []=Subplot_performance(params)
+
     fig = figure(1);
     fig.Position = [0, 0, 700, 600];
 
-    subplot(2, 2, 1);
-    plot(params.SNR_dB,params.M1_1,'b+-');
-    hold on;
-    plot(params.SNR_dB,params.M2_1,'R+-');
-    plot(params.SNR_dB,params.M3_1,'k+-');
-    % plot(params.SNR_dB, params.M4_1,'c+-');
-    % plot(params.SNR_dB, params.M5_1,'yo-');
-    grid on;
-    xlabel('SNR (dB)', 'Fontsize', 12);
-    ylabel('CD', 'Fontsize', 12);
-    legend('Method2', 'Method3', 'Method2 upgraded', 'Location','southeast');
-    
-    subplot(2, 2, 2);
-    plot(params.SNR_dB,params.M1_2,'b+-');
-    hold on;
-    plot(params.SNR_dB,params.M2_2,'R+-');
-    plot(params.SNR_dB,params.M3_2,'k+-');
-    % plot(params.SNR_dB, params.M4_2,'c+-');
-    % plot(params.SNR_dB,params.M5_2,'yo-');
-    grid on;
-    xlabel('SNR (dB)', 'Fontsize', 12)
-    ylabel('GD', 'Fontsize', 12);
-    legend('Method2', 'Method3', 'Method2 upgraded', 'Location','southeast');
-    
-    subplot(2, 2, 3);
-    plot(params.SNR_dB,params.M1_3,'b+-');
-    hold on;
-    plot(params.SNR_dB,params.M2_3,'R+-');
-    plot(params.SNR_dB,params.M3_3,'k+-');
-    % plot(params.SNR_dB, params.M4_3,'c+-');
-    % plot(params.SNR_dB,params.M5_1,'yo-');
-    grid on;
-    xlabel('SNR (dB)', 'Fontsize', 12);
-    ylabel('BD', 'Fontsize', 12);
-    legend('Method2', 'Method3', 'Method2 upgraded', 'Location','southeast');
-    
-    subplot(2, 2, 4);
-    plot(params.SNR_dB,params.M1_4,'b+-');
-    hold on;
-    plot(params.SNR_dB,params.M2_4,'R+-');
-    plot(params.SNR_dB,params.M3_4,'k+-');
-    % plot(params.SNR_dB, params.M4_4,'c+-');
-    % plot(params.SNR_dB,params.M5_1,'yo-');
-    grid on;
-    xlabel('SNR (dB)', 'Fontsize', 12);
-    ylabel('ED', 'Fontsize', 12);
-    legend('Method2', 'Method3', 'Method2 upgraded', 'Location','southeast');
+    % Define colors and markers for each method
+    colors = {'b+-', 'R+-', 'k+-', 'c+-', 'yo-'};
+    labels = {'Method2', 'Method3', 'my-Method2', 'my-Method3', 'Legend5'};
+
+    % Field names for M1_x, M2_x, ..., M5_x
+    field_names = {'M1_', 'M2_', 'M3_', 'M4_', 'M5_'};
+    y_labels = {'CD', 'GD', 'BD', 'ED'};  % Y-axis labels
+
+    for i = 1:4
+        subplot(2, 2, i);
+        hold on;
+        
+        for j = 1:length(field_names)
+            field_name = [field_names{j}, num2str(i)];
+            
+            % 필드 존재 여부 및 데이터가 0이 아닌 값이 있는지 확인
+            if isfield(params, field_name) && any(params.(field_name) ~= 0)
+                plot(params.SNR_dB, params.(field_name), colors{j});
+            end
+        end
+        
+        grid on;
+        xlabel('SNR (dB)', 'Fontsize', 12);
+        ylabel(y_labels{i}, 'Fontsize', 12);
+        legend(labels, 'Location','southeast');
+    end
 end

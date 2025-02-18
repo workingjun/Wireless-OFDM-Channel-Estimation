@@ -37,11 +37,11 @@ function []=Subplot_method2_upgrade_pSumPDF(params, flags)
         title('Random Variable / not 1/N ', 'Interpreter', 'latex');
     
         subplot(2, 3, 3); 
-        stem(1:15, params.SIM);
+        stem(1:16, params.e_sum_pdf);
         grid on;
-        xlim([0 16]);
+        xlim([0 17]);
         ylim([-5 10]);
-        title(['Method2 / $\hat{L}$: '  num2str(params.new_sol)], 'Interpreter', 'latex');
+        title(['Method2 / $\hat{L}$: '  num2str(params.my_method2_sol)], 'Interpreter', 'latex');
     
         subplot(2, 3, 4);
         stem(1:16, params.SIM_channel); 

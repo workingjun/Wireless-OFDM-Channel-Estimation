@@ -143,12 +143,20 @@ for n = 1:length(params.SNR_dB)
         tx_signal = ch_out(1:length(tx_signal));
         params.rx_signal = tx_signal + N_AWGN;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% AWGN 채널을 통과한 수신 신호 생성 !!
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 주파수 선택적 페이딩 채널 ??????????????????????? (가)
-
-        [params.J, params.SIM, params.new_sol] = new_method2(params);%%%%%%(u)th estimated noise power
-        [new_maxium, params.rho, params.c_hat, params.L_sol] = new_method3(params);%%%%%%%%method3 함수를 가져와 사용
-        % [mn_sol, zs_sol, rob, rak_v2] = new_method4(new_maxium,SIM); %%%%%%%%method4로 ranking-sum과 normalization 3가지
-        [e_rx, mean_e_og, sigma_e_og, e_logpdf, e_sum_pdf, params.L_sol_e] = method2_Additional(params);
         
+        params.J = get_noise_variance(params);
+        [params.a_k, params.b_k, params.g_k, params.Asq, params.Bsq, params.ABplussq, params.ABdiffsq, params.ABdiffsq_ch] = get_random_var(params);
+        params.c_hat = get_time_average(params);
+
+        [~, new2_sol] = new_method2(params);%%%%%%(u)th estimated noise power
+        [~, ~, new3_sol] = new_method3(params);%%%%%%%%method3 함수를 가져와 사용
+        % [mn_sol, zs_sol, rob, rak_v2] = new_method4(new_maxium,SIM); %%%%%%%%method4로 ranking-sum과 normalization 3가지
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+        [params.e_sum_pdf, params.my_method2_sol] = my_new_method2(params);
+        [params.rho, params.c_hat, my_method3_sol] = my_new_method3(params);
+
         % Subplot_rxSignal(params) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % LKH_Analy(params) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -158,10 +166,8 @@ for n = 1:length(params.SNR_dB)
             params.SIM_channel_part, params.SIM_noise_part, ...
             params.upgrade_sol, params.confirm_sol, params.confirm2_sol] = method2_upgraded(params);
 
-        % [ABdiffsq, ppw, mean_e, e_rx_logpdf, params.e_sol_rx] = method2_upgraded_add(params);
+        Subplot_method2_upgrade_pSumPDF(params, 0); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        Subplot_method2_upgrade_pSumPDF(params, 0);
-
         if Pilot_CHE_Test == 1 
             hat_H = Pilot_CHE(No_Pilot_symbols, params.N, params.GP, params.rx_signal, Tx_Symbols);
         else
@@ -230,33 +236,34 @@ for n = 1:length(params.SNR_dB)
 
         % Subplot_hhat(params);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        % result = Performance_count(params); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % 
-        % params.count1 = result.count1;
-        % params.count2 = result.count2;
-        % params.count3 = result.count3;
-        % params.count4 = result.count4;
-        % 
-        % params.count11 = result.count11;
-        % params.count12 = result.count12;
-        % params.count13 = result.count13;
-        % params.count14 = result.count14;
-        % 
-        % params.count21 = result.count21;
-        % params.count22 = result.count22;
-        % params.count23 = result.count23;
-        % params.count24 = result.count24;
-        % 
-        % params.count31 = result.count31;
-        % params.count32 = result.count32;
-        % params.count33 = result.count33;
-        % params.count34 = result.count34;
-        % 
-        % params.count41 = result.count41;
-        % params.count42 = result.count42;
-        % params.count43 = result.count43;
-        % params.count44 = result.count44;
-
+        result = Performance_count(params, new2_sol, new3_sol, params.my_method2_sol, my_method3_sol, params.upgrade_sol); 
+    
+        if result.count1 > 0 
+            params.count1 = result.count1;
+            params.count2 = result.count2;
+            params.count3 = result.count3;
+            params.count4 = result.count4;
+    
+            params.count11 = result.count11;
+            params.count12 = result.count12;
+            params.count13 = result.count13;
+            params.count14 = result.count14;
+    
+            params.count21 = result.count21;
+            params.count22 = result.count22;
+            params.count23 = result.count23;
+            params.count24 = result.count24;
+    
+            params.count31 = result.count31;
+            params.count32 = result.count32;
+            params.count33 = result.count33;
+            params.count34 = result.count34;
+    
+            params.count41 = result.count41;
+            params.count42 = result.count42;
+            params.count43 = result.count43;
+            params.count44 = result.count44;
+        end
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(2) :: Error Count !!
         
         Bit_Error = Bit_Error + ( sum(Tx_Bits ~= Rx_Bits) );%%%%%%%%%%%%%%% 명령어의 의미, 동작을 이해하기 바람 !!
