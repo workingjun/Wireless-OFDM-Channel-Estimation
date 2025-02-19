@@ -8,13 +8,17 @@ BPS = log2(params.M);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 params.N = 64;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FFT_size = N;
 params.GP = 16;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N+GP => 1-OFDM length !!
 params.L = 4;
-N_OFDM_symbols = 10^2;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Symbols :: FFT_size <= N by 고균병 at 201012!
+N_OFDM_symbols = 10^3;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Symbols :: FFT_size <= N by 고균병 at 201012!
 N_bits = (BPS*params.N)*N_OFDM_symbols;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Bits per OFDM Symbol == BPS*N
 
-% params.SNR_dB = 0:5:30;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BER Simulation !!
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+params.SNR_dB = 0:5:30;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BER Simulation !!
 % params.SNR_dB = -10:5:40;
-params.SNR_dB = 10;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Constellation 그리기 Enable !!
-params.N_iter = 10^2;%%% 모의 실험 정확도를 높이려면 수를 키우시오! :: 보고서 제출시 10^5 이상 으로 !! 
+% params.SNR_dB = 10;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Constellation 그리기 Enable !!
+params.N_iter = 10^4;%%% 모의 실험 정확도를 높이려면 수를 키우시오! :: 보고서 제출시 10^5 이상 으로 !! 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 No_Pilot_symbols = 1;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Pilots OFDM Symbols !! [201119]
 if No_Pilot_symbols == 0
@@ -148,14 +152,14 @@ for n = 1:length(params.SNR_dB)
         [params.a_k, params.b_k, params.g_k, params.Asq, params.Bsq, params.ABplussq, params.ABdiffsq, params.ABdiffsq_ch] = get_random_var(params);
         params.c_hat = get_time_average(params);
 
-        [~, new2_sol] = new_method2(params);%%%%%%(u)th estimated noise power
-        [~, ~, new3_sol] = new_method3(params);%%%%%%%%method3 함수를 가져와 사용
+        % [~, new2_sol] = new_method2(params);%%%%%%(u)th estimated noise power
+        [rho2, new3_sol] = new_method3(params.rx_signal, params.GP, params.N, params.J);%%%%%%%%method3 함수를 가져와 사용
         % [mn_sol, zs_sol, rob, rak_v2] = new_method4(new_maxium,SIM); %%%%%%%%method4로 ranking-sum과 normalization 3가지
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
         [params.e_sum_pdf, params.my_method2_sol] = my_new_method2(params);
-        [params.rho, params.c_hat, my_method3_sol] = my_new_method3(params);
+        [params.rho, my_method3_sol] = my_new_method3(params);
 
         % Subplot_rxSignal(params) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % LKH_Analy(params) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -166,7 +170,7 @@ for n = 1:length(params.SNR_dB)
             params.SIM_channel_part, params.SIM_noise_part, ...
             params.upgrade_sol, params.confirm_sol, params.confirm2_sol] = method2_upgraded(params);
 
-        Subplot_method2_upgrade_pSumPDF(params, 0); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Subplot_method2_upgrade_pSumPDF(params, 0); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         if Pilot_CHE_Test == 1 
             hat_H = Pilot_CHE(No_Pilot_symbols, params.N, params.GP, params.rx_signal, Tx_Symbols);
@@ -236,7 +240,7 @@ for n = 1:length(params.SNR_dB)
 
         % Subplot_hhat(params);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        result = Performance_count(params, new2_sol, new3_sol, params.my_method2_sol, my_method3_sol, params.upgrade_sol); 
+        result = Performance_count(params, params.my_method2_sol, new3_sol, my_method3_sol, params.upgrade_sol); 
     
         if result.count1 > 0 
             params.count1 = result.count1;
