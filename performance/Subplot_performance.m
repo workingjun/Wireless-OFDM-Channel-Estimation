@@ -5,7 +5,7 @@ function []=Subplot_performance(params)
 
     % Define colors and markers for each method
     colors = {'b+-', 'R+-', 'k+-', 'c+-', 'yo-'};
-    labels = {'Method2', 'Method3', 'upgrade', 'my-Method3', 'Legend5'};
+    labels = {'Method2', 'Method3', 'my-Method3', 'Legend4', 'Legend5'};
 
     % Field names for M1_x, M2_x, ..., M5_x
     field_names = {'M1_', 'M2_', 'M3_', 'M4_', 'M5_'};

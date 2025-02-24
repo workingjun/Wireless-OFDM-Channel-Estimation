@@ -11,7 +11,7 @@ function [rho, my_method3_sol] = my_new_method3(params)
     b_k = params.b_k;
     g_k = params.g_k;
     c_hat = params.c_hat;
-
+    
     for kk=1:GP
         for xx=1:-0.0001:0
             if method3_power_func(xx, kk, c_hat, a_k, b_k) < 10^-10

@@ -1,5 +1,4 @@
-function result = Performance_count(params, varargin)
-        n = params.n;        
+function params = Performance_count(params, varargin)       
         L = params.L;
         GP = params.GP;
        
@@ -79,30 +78,5 @@ function result = Performance_count(params, varargin)
                  params.count44 = params.count44+1;
              end
          end
-         
-        result.count1 = params.count1;
-        result.count2 = params.count2;
-        result.count3 = params.count3;
-        result.count4 = params.count4;
-        
-        result.count11 = params.count11;
-        result.count12 = params.count12;
-        result.count13 = params.count13;
-        result.count14 = params.count14;
-        
-        result.count21 = params.count21;
-        result.count22 = params.count22;
-        result.count23 = params.count23;
-        result.count24 = params.count24;
-        
-        result.count31 = params.count31;
-        result.count32 = params.count32;
-        result.count33 = params.count33;
-        result.count34 = params.count34;
-        
-        result.count41 = params.count41;
-        result.count42 = params.count42;
-        result.count43 = params.count43;
-        result.count44 = params.count44;
         
 end

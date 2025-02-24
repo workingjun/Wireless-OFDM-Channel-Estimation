@@ -8,15 +8,15 @@ BPS = log2(params.M);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 params.N = 64;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FFT_size = N;
 params.GP = 16;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N+GP => 1-OFDM length !!
 params.L = 4;
-N_OFDM_symbols = 10^3;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Symbols :: FFT_size <= N by 고균병 at 201012!
-N_bits = (BPS*params.N)*N_OFDM_symbols;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Bits per OFDM Symbol == BPS*N
+params.N_OFDM_symbols = 10^3;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Symbols :: FFT_size <= N by 고균병 at 201012!
+N_bits = (BPS*params.N)*params.N_OFDM_symbols;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Number of Bits per OFDM Symbol == BPS*N
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 params.SNR_dB = 0:5:30;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BER Simulation !!
 % params.SNR_dB = -10:5:40;
 % params.SNR_dB = 10;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Constellation 그리기 Enable !!
-params.N_iter = 10^4;%%% 모의 실험 정확도를 높이려면 수를 키우시오! :: 보고서 제출시 10^5 이상 으로 !! 
+params.N_iter = 10^2;%%% 모의 실험 정확도를 높이려면 수를 키우시오! :: 보고서 제출시 10^5 이상 으로 !! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -40,14 +40,14 @@ N_power = 1./params.SNR;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Signal_F  = zeros(1,params.N);
-tx_signal = zeros(1,(params.N+params.GP)*N_OFDM_symbols);
+tx_signal = zeros(1,(params.N+params.GP)*params.N_OFDM_symbols);
 
 tx_bits_per_OFDM = zeros(1,params.N*BPS);
 rx_bits_per_OFDM = zeros(1,params.N*BPS);
 Tx_Bits = zeros(1,N_bits);
 Rx_Bits = zeros(1,N_bits);
-Tx_Symbols = zeros(1,params.N*N_OFDM_symbols);
-Rx_Symbols = zeros(1,params.N*N_OFDM_symbols);
+Tx_Symbols = zeros(1,params.N*params.N_OFDM_symbols);
+Rx_Symbols = zeros(1,params.N*params.N_OFDM_symbols);
 
 params.P = zeros(1, params.N-1);
 params.Z = zeros(1, params.N-1);
@@ -104,7 +104,7 @@ for n = 1:length(params.SNR_dB)
         Tx_Bits = randi([0 1],1,N_bits);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Randdom Bit Generation ==> 전송하고자하는 비트열 !!
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 송신기 Part(2) :: 전송 OFDM 심볼 생성 !! 
-        for tt=1:N_OFDM_symbols
+        for tt=1:params.N_OFDM_symbols
             ST = (tt-1)*(BPS*params.N) + 1; 
             To = (tt-1)*(BPS*params.N) + (BPS*params.N); 
             tx_bits_per_OFDM = Tx_Bits(ST:To);%% OFDM 심볼당 (BPS*N) bits !!
@@ -169,8 +169,16 @@ for n = 1:length(params.SNR_dB)
             params.SIM_upgrade, params.SIM_channel, params.SIM_noise, ...
             params.SIM_channel_part, params.SIM_noise_part, ...
             params.upgrade_sol, params.confirm_sol, params.confirm2_sol] = method2_upgraded(params);
+        
+        [~, p_L_sol] = max(params.p_rx_sum_pdf);
 
-        % Subplot_method2_upgrade_pSumPDF(params, 0); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % figure(101)
+        % stem(1:16, params.p_rx_sum_pdf);
+        % title(['$\hat{L}$: '  num2str(p_L_sol)], 'Interpreter', 'latex');
+        % grid on;
+        % pause;
+
+        % Subplot_method2_upgrade(params, false); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         if Pilot_CHE_Test == 1 
             hat_H = Pilot_CHE(No_Pilot_symbols, params.N, params.GP, params.rx_signal, Tx_Symbols);
@@ -179,95 +187,71 @@ for n = 1:length(params.SNR_dB)
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(1) :: 수신 비트 검출 == Rx Bit Detection !! 
-        for tt=1:N_OFDM_symbols
-            ST = (tt-1)*(params.N+params.GP) + params.GP+1; 
-            To = (tt-1)*(params.N+params.GP) + params.GP+params.N; 
-            Rx_Signal_T = params.rx_signal(ST:To);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 시간축에서 GP를 제거한 OFDM 심볼!!
-            Rx_Signal_F = fft(Rx_Signal_T)/sqrt(params.N);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 주파수 축으로 변환 !!
-            Rx_Signal_F = fftshift(Rx_Signal_F);
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% fftshfit && *sqrt(N) && /sqrt(N) [여러분이 추가 !!]
-
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(2) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! (가->나)
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 채널에 의한 왜곡 보상? :: AWGN 채널은 필요 없음!!
-            Rx_Signal_F_DivH = Rx_Signal_F./hat_H;
-
-            for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
-                Bits_tmp = Rx_Bits_gen(params.M, Rx_Signal_F_DivH(ss));
-                ST = (ss-1)*BPS + 1; 
-                To = (ss-1)*BPS + BPS;
-                rx_bits_per_OFDM(ST:To) = Bits_tmp;
-            end
-            ST = (tt-1)*(BPS*params.N) + 1; 
-            To = (tt-1)*(BPS*params.N) + (BPS*params.N); 
-            Rx_Bits(ST:To) = rx_bits_per_OFDM;%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OFDM 심볼당 (BPS*N) bits !!
-
-            for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
-                ST = (ss-1)*BPS + 1; 
-                To = (ss-1)*BPS + BPS;
-                Signal_F(ss) = Tx_Symbol_gen(params.M, rx_bits_per_OFDM(ST:To));%% M-PSK Symbol Generation ==> 전송할 변조 심벌 생성 !!
-            end
-            ST = (tt-1)*params.N + 1; 
-            To = (tt-1)*params.N + params.N; 
-            Rx_Symbols(ST:To) = Signal_F;
-            Rx_Symbols_forTxSymbols(ST:To) = Rx_Signal_F;
-            H_hat = Rx_Symbols_forTxSymbols(ST:To)./Tx_Symbols(ST:To);
-
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-            % H_hat = fftshift(H_hat);%%%%%%%%%%%%%%%%%%%%%%%%fft를 한 이후 shift를 거쳐 ifft를 하면 1,-1,1,-1과 같이 제대로 변환이 되지 않음(x)           
-            h_hat = ifft(H_hat)*sqrt(params.N);%시간축으로 변환, 잡음분산은 1/N*sqrt(N)^2으로 파워 맞춤, 채널분산은         
-            y_i = abs(h_hat).^2; 
-
-            params.Y_u = ((tt-1)*params.Y_u + y_i)/tt; %순차적으로 더해서 M 평균
-
-            L1_sums = cumsum(y_i(1:params.N-1)); %1부터 u까지 summation -> 누적합으로 표현  
-            L2_sums = cumsum(y_i(2:params.N), 'reverse') ./ (params.N-1:-1:1); %u+1부터 N까지 summation, 평균
-
-            params.P(1:params.N-1) = ((tt-1) * params.P(1:params.N-1) + L1_sums) / tt; %순차적으로 더해서 M평균
-            params.Z(1:params.N-1) = ((tt-1) * params.Z(1:params.N-1) + L2_sums) / tt; %순차적으로 더해서 M평균
-
-            y_i_cumsum = cumsum(y_i, 'reverse')./(params.N:-1:1); %거꾸로 누적 summation          
-            params.JJ = ((tt-1) * params.JJ + y_i_cumsum) / tt; %순차적으로 더해서 M평균
-            
-        end 
+        % for tt=1:params.N_OFDM_symbols
+        %     ST = (tt-1)*(params.N+params.GP) + params.GP+1; 
+        %     To = (tt-1)*(params.N+params.GP) + params.GP+params.N; 
+        %     Rx_Signal_T = params.rx_signal(ST:To);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 시간축에서 GP를 제거한 OFDM 심볼!!
+        %     Rx_Signal_F = fft(Rx_Signal_T)/sqrt(params.N);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 주파수 축으로 변환 !!
+        %     Rx_Signal_F = fftshift(Rx_Signal_F);
+        %     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% fftshfit && *sqrt(N) && /sqrt(N) [여러분이 추가 !!]
+        % 
+        %     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(2) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! (가->나)
+        %     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 채널에 의한 왜곡 보상? :: AWGN 채널은 필요 없음!!
+        %     Rx_Signal_F_DivH = Rx_Signal_F./hat_H;
+        % 
+        %     for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
+        %         Bits_tmp = Rx_Bits_gen(params.M, Rx_Signal_F_DivH(ss));
+        %         ST = (ss-1)*BPS + 1; 
+        %         To = (ss-1)*BPS + BPS;
+        %         rx_bits_per_OFDM(ST:To) = Bits_tmp;
+        %     end
+        %     ST = (tt-1)*(BPS*params.N) + 1; 
+        %     To = (tt-1)*(BPS*params.N) + (BPS*params.N); 
+        %     Rx_Bits(ST:To) = rx_bits_per_OFDM;%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OFDM 심볼당 (BPS*N) bits !!
+        % 
+        %     for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
+        %         ST = (ss-1)*BPS + 1; 
+        %         To = (ss-1)*BPS + BPS;
+        %         Signal_F(ss) = Tx_Symbol_gen(params.M, rx_bits_per_OFDM(ST:To));%% M-PSK Symbol Generation ==> 전송할 변조 심벌 생성 !!
+        %     end
+        %     ST = (tt-1)*params.N + 1; 
+        %     To = (tt-1)*params.N + params.N; 
+        %     Rx_Symbols(ST:To) = Signal_F;
+        %     Rx_Symbols_forTxSymbols(ST:To) = Rx_Signal_F;
+        %     H_hat = Rx_Symbols_forTxSymbols(ST:To)./Tx_Symbols(ST:To);
+        % 
+        %     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % 
+        %     % H_hat = fftshift(H_hat);%%%%%%%%%%%%%%%%%%%%%%%%fft를 한 이후 shift를 거쳐 ifft를 하면 1,-1,1,-1과 같이 제대로 변환이 되지 않음(x)           
+        %     h_hat = ifft(H_hat)*sqrt(params.N);%시간축으로 변환, 잡음분산은 1/N*sqrt(N)^2으로 파워 맞춤, 채널분산은         
+        %     y_i = abs(h_hat).^2; 
+        % 
+        %     params.Y_u = ((tt-1)*params.Y_u + y_i)/tt; %순차적으로 더해서 M 평균
+        % 
+        %     L1_sums = cumsum(y_i(1:params.N-1)); %1부터 u까지 summation -> 누적합으로 표현  
+        %     L2_sums = cumsum(y_i(2:params.N), 'reverse') ./ (params.N-1:-1:1); %u+1부터 N까지 summation, 평균
+        % 
+        %     params.P(1:params.N-1) = ((tt-1) * params.P(1:params.N-1) + L1_sums) / tt; %순차적으로 더해서 M평균
+        %     params.Z(1:params.N-1) = ((tt-1) * params.Z(1:params.N-1) + L2_sums) / tt; %순차적으로 더해서 M평균
+        % 
+        %     y_i_cumsum = cumsum(y_i, 'reverse')./(params.N:-1:1); %거꾸로 누적 summation          
+        %     params.JJ = ((tt-1) * params.JJ + y_i_cumsum) / tt; %순차적으로 더해서 M평균
+        % 
+        % end 
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        [params.p_pdf, params.z_pdf, params.p_Log_pdf, params.z_Log_pdf, params.L_sol_p, params.L_sol_z] = hhat_Taps_Noise(params); %랜덤변수 P와 Z의 pdf
-        [params.Y_pdf, params.Y_multi_pdf, params.Y_sum_pdf, params.L_sol_y1, params.L_sol_y2] = hhat_Y(params); %랜덤변수 Y_l의 pdf, joint pdf, LLR
-        [params.e_pdf, params.e_multi_pdf, params.e_sum_pdf, params.L_sol_e1, params.L_sol_e2] = hhat_epcilon(params); %랜덤변수 e_l의 pdf, joint pdf, LLR
-        [params.Pe_multi_pdf, params.Pe_sum_pdf, params.L_sol_pe1, params.L_sol_pe2] = hhat_pEpcilon(params); %랜덤변수 Pe_l의 joint pdf, LLR
+        % [params.p_pdf, params.z_pdf, params.p_Log_pdf, params.z_Log_pdf, params.L_sol_p, params.L_sol_z] = hhat_Taps_Noise(params); %랜덤변수 P와 Z의 pdf
+        % [params.Y_pdf, params.Y_multi_pdf, params.Y_sum_pdf, params.L_sol_y1, params.L_sol_y2] = hhat_Y(params); %랜덤변수 Y_l의 pdf, joint pdf, LLR
+        % [params.e_pdf, params.e_multi_pdf, params.e_sum_pdf, params.L_sol_e1, params.L_sol_e2] = hhat_epcilon(params); %랜덤변수 e_l의 pdf, joint pdf, LLR
+        % [params.Pe_multi_pdf, params.Pe_sum_pdf, params.L_sol_pe1, params.L_sol_pe2] = hhat_pEpcilon(params); %랜덤변수 Pe_l의 joint pdf, LLR
 
         % Subplot_hhat(params);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        result = Performance_count(params, params.my_method2_sol, new3_sol, my_method3_sol, params.upgrade_sol); 
-    
-        if result.count1 > 0 
-            params.count1 = result.count1;
-            params.count2 = result.count2;
-            params.count3 = result.count3;
-            params.count4 = result.count4;
-    
-            params.count11 = result.count11;
-            params.count12 = result.count12;
-            params.count13 = result.count13;
-            params.count14 = result.count14;
-    
-            params.count21 = result.count21;
-            params.count22 = result.count22;
-            params.count23 = result.count23;
-            params.count24 = result.count24;
-    
-            params.count31 = result.count31;
-            params.count32 = result.count32;
-            params.count33 = result.count33;
-            params.count34 = result.count34;
-    
-            params.count41 = result.count41;
-            params.count42 = result.count42;
-            params.count43 = result.count43;
-            params.count44 = result.count44;
-        end
+        params = Performance_count(params, params.my_method2_sol, new3_sol, my_method3_sol, params.upgrade_sol); %%%%%%%%%%%%%%%%%%%%%%%%%
+  
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(2) :: Error Count !!
         
         Bit_Error = Bit_Error + ( sum(Tx_Bits ~= Rx_Bits) );%%%%%%%%%%%%%%% 명령어의 의미, 동작을 이해하기 바람 !!
@@ -275,45 +259,50 @@ for n = 1:length(params.SNR_dB)
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        h_hat_forDiv(1:params.L_sol_pe1) = h_hat(1:params.L_sol_pe1);
-        h_hat_forDiv(params.L_sol_pe1 + 1:params.N)=0;
-        H_hat_forDiv = fft(h_hat_forDiv, params.N);
+        % h_hat_forDiv(1:params.L_sol_pe1) = h_hat(1:params.L_sol_pe1);
+        % h_hat_forDiv(params.L_sol_pe1 + 1:params.N)=0;
+        % H_hat_forDiv = fft(h_hat_forDiv, params.N);
     
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(3) :: 수신 비트 검출 == Rx Bit Detection !! 
-        for tt=1:N_OFDM_symbols
-            ST = (tt-1)*(params.N+params.GP) + params.GP+1; 
-            To = (tt-1)*(params.N+params.GP) + params.GP+params.N; 
-            Rx_Signal_T = params.rx_signal(ST:To);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 시간축에서 GP를 제거한 OFDM 심볼!!
-            Rx_Signal_F = fft(Rx_Signal_T)/sqrt(params.N);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 주파수 축으로 변환 !!
-            Rx_Signal_F = fftshift(Rx_Signal_F);
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% fftshfit && *sqrt(N) && /sqrt(N) [여러분이 추가 !!]
-    
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(2) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! (가->나)
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 채널에 의한 왜곡 보상? :: AWGN 채널은 필요 없음!!
-            Rx_Signal_F_DivH = Rx_Signal_F./H_hat_forDiv;
-    
-            for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
-                Bits_tmp = Rx_Bits_gen(params.M, Rx_Signal_F_DivH(ss));
-                ST = (ss-1)*BPS + 1; 
-                To = (ss-1)*BPS + BPS;
-                rx_bits_per_OFDM(ST:To) = Bits_tmp;
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(3) :: 수신 비트 검출 == Rx Bit Detection !!
+        if exist('H_hat_forDiv', 'var')
+            for tt=1:params.N_OFDM_symbols
+                ST = (tt-1)*(params.N+params.GP) + params.GP+1; 
+                To = (tt-1)*(params.N+params.GP) + params.GP+params.N; 
+                Rx_Signal_T = params.rx_signal(ST:To);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 시간축에서 GP를 제거한 OFDM 심볼!!
+                Rx_Signal_F = fft(Rx_Signal_T)/sqrt(params.N);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 주파수 축으로 변환 !!
+                Rx_Signal_F = fftshift(Rx_Signal_F);
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% fftshfit && *sqrt(N) && /sqrt(N) [여러분이 추가 !!]
+        
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(2) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! (가->나)
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 채널에 의한 왜곡 보상? :: AWGN 채널은 필요 없음!!
+                Rx_Signal_F_DivH = Rx_Signal_F./H_hat_forDiv;
+        
+                for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
+                    Bits_tmp = Rx_Bits_gen(params.M, Rx_Signal_F_DivH(ss));
+                    ST = (ss-1)*BPS + 1; 
+                    To = (ss-1)*BPS + BPS;
+                    rx_bits_per_OFDM(ST:To) = Bits_tmp;
+                end
+                ST = (tt-1)*(BPS*params.N) + 1; 
+                To = (tt-1)*(BPS*params.N) + (BPS*params.N); 
+                Rx_Bits2(ST:To) = rx_bits_per_OFDM;%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OFDM 심볼당 (BPS*N) bits !!
+        
+                for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
+                    ST = (ss-1)*BPS + 1; 
+                    To = (ss-1)*BPS + BPS;
+                    Signal_F(ss) = Tx_Symbol_gen(params.M, rx_bits_per_OFDM(ST:To));%% M-PSK Symbol Generation ==> 전송할 변조 심벌 생성 !!
+                end
+                ST = (tt-1)*params.N + 1; 
+                To = (tt-1)*params.N + params.N; 
+                Rx_Symbols2(ST:To) = Signal_F;
             end
-            ST = (tt-1)*(BPS*params.N) + 1; 
-            To = (tt-1)*(BPS*params.N) + (BPS*params.N); 
-            Rx_Bits2(ST:To) = rx_bits_per_OFDM;%%%%%%%%%%%%%%%%%%%%%%%%%%%%% OFDM 심볼당 (BPS*N) bits !!
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(4) :: Error Count !!
     
-            for ss=1:params.N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% N 개의 PSK 심볼 => 1-OFDM symbol !! 
-                ST = (ss-1)*BPS + 1; 
-                To = (ss-1)*BPS + BPS;
-                Signal_F(ss) = Tx_Symbol_gen(params.M, rx_bits_per_OFDM(ST:To));%% M-PSK Symbol Generation ==> 전송할 변조 심벌 생성 !!
-            end
-            ST = (tt-1)*params.N + 1; 
-            To = (tt-1)*params.N + params.N; 
-            Rx_Symbols2(ST:To) = Signal_F;
+            Bit_Error2 = Bit_Error2 + ( sum(Tx_Bits ~= Rx_Bits2) );%%%%%%%%%%%%%%% 명령어의 의미, 동작을 이해하기 바람 !!
+            Symbol_Error2 = Symbol_Error2 + ( sum(Tx_Symbols ~= Rx_Symbols2) );%%% 명령어의 의미, 동작을 이해하기 바람 !! 
+
         end
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(4) :: Error Count !!
-        Bit_Error2 = Bit_Error2 + ( sum(Tx_Bits ~= Rx_Bits2) );%%%%%%%%%%%%%%% 명령어의 의미, 동작을 이해하기 바람 !!
-        Symbol_Error2 = Symbol_Error2 + ( sum(Tx_Symbols ~= Rx_Symbols2) );%%% 명령어의 의미, 동작을 이해하기 바람 !! 
+
     end
     params.M1_1(n) = params.count1/params.N_iter;
     params.M1_2(n) = params.count2/params.N_iter;
@@ -341,10 +330,11 @@ for n = 1:length(params.SNR_dB)
     params.M5_4(n) = params.count44/params.N_iter;
 
     params.Sim_BER(n) = Bit_Error/(N_bits*params.N_iter);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SNR_dB(n)의 BER 계산 !!
-    params.Sim_SER(n) = Symbol_Error/(params.N*N_OFDM_symbols*params.N_iter);%%%%%%%%%%%%%%%%%%%%%%% SNR_dB(n)의 SER 계산 !!  
+    params.Sim_SER(n) = Symbol_Error/(params.N*params.N_OFDM_symbols*params.N_iter);%%%%%%%%%%%%%%%%%%%%%%% SNR_dB(n)의 SER 계산 !!  
 
     params.Sim_BER2(n) = Bit_Error2/(N_bits*params.N_iter);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% SNR_dB(n)의 BER 계산 !!
-    params.Sim_SER2(n) = Symbol_Error2/(params.N*N_OFDM_symbols*params.N_iter);%%%%%%%%%%%%%%%%%%%%%%% SNR_dB(n)의 SER 계산 !! 
+    params.Sim_SER2(n) = Symbol_Error2/(params.N*params.N_OFDM_symbols*params.N_iter);%%%%%%%%%%%%%%%%%%%%%%% SNR_dB(n)의 SER 계산 !! 
+    
 end
 
 Subplot_performance(params); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
