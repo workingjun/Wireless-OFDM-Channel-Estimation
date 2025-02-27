@@ -1,4 +1,4 @@
-function [new_maxium,L_sol] = new_method3(r,GP,N,J)
+function [rho,L_sol] = new_method3(r,GP,N,J)
 p_break = zeros(1,GP);
 a_k = zeros(1,GP);
 b_k = zeros(1,GP);

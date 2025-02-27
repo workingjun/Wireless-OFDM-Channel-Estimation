@@ -13,9 +13,9 @@ N_bits = (BPS*params.N)*params.N_OFDM_symbols;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-params.SNR_dB = 0:5:30;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BER Simulation !!
+% params.SNR_dB = 0:5:30;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BER Simulation !!
 % params.SNR_dB = -10:5:40;
-% params.SNR_dB = 10;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Constellation 그리기 Enable !!
+params.SNR_dB = 10;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Constellation 그리기 Enable !!
 params.N_iter = 10^2;%%% 모의 실험 정확도를 높이려면 수를 키우시오! :: 보고서 제출시 10^5 이상 으로 !! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -164,20 +164,12 @@ for n = 1:length(params.SNR_dB)
         % Subplot_rxSignal(params) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % LKH_Analy(params) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        [params.ABdiffsq, params.ABdiffsq_ch, mean_p, ...
-            params.p_rx_logpdf, params.p_rx_sum_pdf, params.e_rx_sum_pdf, ...
-            params.SIM_upgrade, params.SIM_channel, params.SIM_noise, ...
-            params.SIM_channel_part, params.SIM_noise_part, ...
-            params.upgrade_sol, params.confirm_sol, params.confirm2_sol] = method2_upgraded(params);
-        
-        [~, p_L_sol] = max(params.p_rx_sum_pdf);
+        [params.p_rx_logpdf1, params.p_rx_logpdf2, params.p_rx_sum_pdf1, params.p_rx_sum_pdf2, ...
+          params.e_rx_logpdf1, params.e_rx_logpdf2, params.e_rx_sum_pdf1, params.e_rx_sum_pdf2, ...
+          params.pe_rx_sum_pdf1, params.pe_rx_sum_pdf2, ...
+          params.p_sol1, params.p_sol2, params.e_sol1, params.e_sol2, params.pe_sol1, params.pe_sol2] = method2_upgraded(params);
 
-        % figure(101)
-        % stem(1:16, params.p_rx_sum_pdf);
-        % title(['$\hat{L}$: '  num2str(p_L_sol)], 'Interpreter', 'latex');
-        % grid on;
-        % pause;
-
+        Subplot_method2_upgrade_LLR(params, 1); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % Subplot_method2_upgrade(params, false); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         if Pilot_CHE_Test == 1 
@@ -247,10 +239,6 @@ for n = 1:length(params.SNR_dB)
         % [params.Pe_multi_pdf, params.Pe_sum_pdf, params.L_sol_pe1, params.L_sol_pe2] = hhat_pEpcilon(params); %랜덤변수 Pe_l의 joint pdf, LLR
 
         % Subplot_hhat(params);%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        params = Performance_count(params, params.my_method2_sol, new3_sol, my_method3_sol, params.upgrade_sol); %%%%%%%%%%%%%%%%%%%%%%%%%
   
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 수신기 Part(2) :: Error Count !!
         
@@ -300,10 +288,16 @@ for n = 1:length(params.SNR_dB)
     
             Bit_Error2 = Bit_Error2 + ( sum(Tx_Bits ~= Rx_Bits2) );%%%%%%%%%%%%%%% 명령어의 의미, 동작을 이해하기 바람 !!
             Symbol_Error2 = Symbol_Error2 + ( sum(Tx_Symbols ~= Rx_Symbols2) );%%% 명령어의 의미, 동작을 이해하기 바람 !! 
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+            params = Performance_count(params, params.my_method2_sol, new3_sol, my_method3_sol); %%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         end
 
     end
+    
     params.M1_1(n) = params.count1/params.N_iter;
     params.M1_2(n) = params.count2/params.N_iter;
     params.M1_3(n) = params.count3/params.N_iter;
